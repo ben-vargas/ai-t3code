@@ -44,7 +44,7 @@ const asTurnId = (value: string): TurnId => TurnId.makeUnsafe(value);
 type LegacyProviderRuntimeEvent = {
   readonly type: string;
   readonly eventId: EventId;
-  readonly provider: "codex";
+  readonly provider: "codex" | "claudeCode" | "cursor";
   readonly createdAt: string;
   readonly threadId: ThreadId;
   readonly turnId?: string | undefined;
@@ -53,7 +53,6 @@ type LegacyProviderRuntimeEvent = {
   readonly payload?: unknown | undefined;
   readonly [key: string]: unknown;
 };
-
 function createProviderServiceHarness(
   cwd: string,
   hasSession = true,
@@ -494,7 +493,9 @@ describe("CheckpointReactor", () => {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "ready",
           providerName: "claudeCode",
-          runtimeMode: "approval-required",
+          runtimeMode: "full-access",
+          approvalPolicy: "on-request",
+          sandboxMode: "workspace-write",
           activeTurnId: null,
           lastError: null,
           updatedAt: createdAt,
@@ -867,7 +868,9 @@ describe("CheckpointReactor", () => {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "ready",
           providerName: "claudeCode",
-          runtimeMode: "approval-required",
+          runtimeMode: "full-access",
+          approvalPolicy: "on-request",
+          sandboxMode: "workspace-write",
           activeTurnId: null,
           lastError: null,
           updatedAt: createdAt,

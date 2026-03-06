@@ -39,15 +39,19 @@ const asProjectId = (value: string): ProjectId => ProjectId.makeUnsafe(value);
 const asItemId = (value: string): ProviderItemId => ProviderItemId.makeUnsafe(value);
 const asEventId = (value: string): EventId => EventId.makeUnsafe(value);
 const asMessageId = (value: string): MessageId => MessageId.makeUnsafe(value);
+const asSessionId = (value: string): string => value;
+const asProviderThreadId = (value: string): string => value;
+const asProviderTurnId = (value: string): string => value;
 const asThreadId = (value: string): ThreadId => ThreadId.makeUnsafe(value);
 const asTurnId = (value: string): TurnId => TurnId.makeUnsafe(value);
 
 type LegacyProviderRuntimeEvent = {
   readonly type: string;
   readonly eventId: EventId;
-  readonly provider: "codex";
+  readonly provider: "codex" | "claudeCode" | "cursor";
+  readonly sessionId?: string | undefined;
   readonly createdAt: string;
-  readonly threadId: ThreadId;
+  readonly threadId?: string | undefined;
   readonly turnId?: string | undefined;
   readonly itemId?: string | undefined;
   readonly requestId?: string | undefined;
@@ -500,6 +504,65 @@ describe("ProviderRuntimeIngestion", () => {
       createdAt: new Date().toISOString(),
       threadId: asThreadId("thread-1"),
       turnId: asTurnId("turn-primary"),
+      status: "completed",
+    });
+
+    await waitForThread(
+      harness.engine,
+      (thread) => thread.session?.status === "ready" && thread.session?.activeTurnId === null,
+    );
+  });
+
+  it("accepts claude turn lifecycle when seeded thread id is a synthetic placeholder", async () => {
+    const harness = await createHarness();
+    const seededAt = new Date().toISOString();
+
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.session.set",
+        commandId: CommandId.makeUnsafe("cmd-session-seed-claude-placeholder"),
+        threadId: ThreadId.makeUnsafe("thread-1"),
+        session: {
+          threadId: ThreadId.makeUnsafe("thread-1"),
+          status: "ready",
+          providerName: "claudeCode",
+          providerSessionId: asSessionId("sess-1"),
+          providerThreadId: asProviderThreadId("claude-thread-placeholder"),
+          approvalPolicy: "on-request",
+          sandboxMode: "workspace-write",
+          activeTurnId: null,
+          updatedAt: seededAt,
+          lastError: null,
+        },
+        createdAt: seededAt,
+      }),
+    );
+
+    harness.emit({
+      type: "turn.started",
+      eventId: asEventId("evt-turn-started-claude-placeholder"),
+      provider: "claudeCode",
+      sessionId: asSessionId("sess-1"),
+      createdAt: new Date().toISOString(),
+      threadId: asProviderThreadId("provider-thread-real"),
+      turnId: asProviderTurnId("turn-claude-placeholder"),
+    });
+
+    await waitForThread(
+      harness.engine,
+      (thread) =>
+        thread.session?.status === "running" &&
+        thread.session?.activeTurnId === "turn-claude-placeholder",
+    );
+
+    harness.emit({
+      type: "turn.completed",
+      eventId: asEventId("evt-turn-completed-claude-placeholder"),
+      provider: "claudeCode",
+      sessionId: asSessionId("sess-1"),
+      createdAt: new Date().toISOString(),
+      threadId: asProviderThreadId("provider-thread-real"),
+      turnId: asProviderTurnId("turn-claude-placeholder"),
       status: "completed",
     });
 

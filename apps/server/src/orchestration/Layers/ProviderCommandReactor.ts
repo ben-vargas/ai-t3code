@@ -1,10 +1,14 @@
 import {
   type ChatAttachment,
   CommandId,
+  DEFAULT_PROVIDER_APPROVAL_POLICY,
+  DEFAULT_PROVIDER_SANDBOX_MODE,
   EventId,
   type OrchestrationEvent,
+  type ProviderApprovalPolicy,
   type ProviderModelOptions,
   type ProviderKind,
+  type ProviderSandboxMode,
   type ProviderStartOptions,
   type OrchestrationSession,
   ThreadId,
@@ -196,6 +200,8 @@ const make = Effect.gen(function* () {
       readonly model?: string;
       readonly modelOptions?: ProviderModelOptions;
       readonly providerOptions?: ProviderStartOptions;
+      readonly approvalPolicy?: ProviderApprovalPolicy;
+      readonly sandboxMode?: ProviderSandboxMode;
     },
   ) {
     const readModel = yield* orchestrationEngine.getReadModel();
@@ -205,8 +211,16 @@ const make = Effect.gen(function* () {
     }
 
     const desiredRuntimeMode = thread.runtimeMode;
+    const desiredApprovalPolicy =
+      options?.approvalPolicy ?? thread.session?.approvalPolicy ?? DEFAULT_PROVIDER_APPROVAL_POLICY;
+    const desiredSandboxMode =
+      options?.sandboxMode ?? thread.session?.sandboxMode ?? DEFAULT_PROVIDER_SANDBOX_MODE;
     const currentProvider: ProviderKind | undefined =
-      thread.session?.providerName === "codex" ? thread.session.providerName : undefined;
+      thread.session?.providerName === "codex" ||
+      thread.session?.providerName === "claudeCode" ||
+      thread.session?.providerName === "cursor"
+        ? thread.session.providerName
+        : undefined;
     const preferredProvider: ProviderKind | undefined = options?.provider ?? currentProvider;
     const desiredModel = options?.model ?? thread.model;
     const effectiveCwd = resolveThreadWorkspaceCwd({
@@ -231,9 +245,9 @@ const make = Effect.gen(function* () {
         ...(effectiveCwd ? { cwd: effectiveCwd } : {}),
         ...(desiredModel ? { model: desiredModel } : {}),
         ...(options?.modelOptions !== undefined ? { modelOptions: options.modelOptions } : {}),
-        ...(options?.providerOptions !== undefined
-          ? { providerOptions: options.providerOptions }
-          : {}),
+        ...(options?.approvalPolicy !== undefined ? { approvalPolicy: options.approvalPolicy } : {}),
+        ...(options?.sandboxMode !== undefined ? { sandboxMode: options.sandboxMode } : {}),
+        ...(options?.providerOptions !== undefined ? { providerOptions: options.providerOptions } : {}),
         ...(input?.resumeCursor !== undefined ? { resumeCursor: input.resumeCursor } : {}),
         runtimeMode: desiredRuntimeMode,
       });
@@ -245,7 +259,13 @@ const make = Effect.gen(function* () {
           threadId,
           status: mapProviderSessionStatusToOrchestrationStatus(session.status),
           providerName: session.provider,
+          providerSessionId:
+            (session as ProviderSession & { sessionId?: string }).sessionId ?? session.threadId,
+          providerThreadId:
+            (session as ProviderSession & { providerThreadId?: string }).providerThreadId ?? null,
           runtimeMode: desiredRuntimeMode,
+          approvalPolicy: desiredApprovalPolicy,
+          sandboxMode: desiredSandboxMode,
           // Provider turn ids are not orchestration turn ids.
           activeTurnId: null,
           lastError: session.lastError ?? null,
@@ -258,8 +278,12 @@ const make = Effect.gen(function* () {
       thread.session && thread.session.status !== "stopped" ? thread.id : null;
     if (existingSessionThreadId) {
       const runtimeModeChanged = thread.runtimeMode !== thread.session?.runtimeMode;
-      const providerChanged =
-        options?.provider !== undefined && options.provider !== currentProvider;
+      const approvalPolicyChanged =
+        options?.approvalPolicy !== undefined &&
+        options.approvalPolicy !== thread.session?.approvalPolicy;
+      const sandboxModeChanged =
+        options?.sandboxMode !== undefined && options.sandboxMode !== thread.session?.sandboxMode;
+      const providerChanged = options?.provider !== undefined && options.provider !== currentProvider;
       const activeSession = yield* resolveActiveSession(existingSessionThreadId);
       const sessionModelSwitch =
         currentProvider === undefined
@@ -268,7 +292,13 @@ const make = Effect.gen(function* () {
       const modelChanged = options?.model !== undefined && options.model !== activeSession?.model;
       const shouldRestartForModelChange = modelChanged && sessionModelSwitch === "restart-session";
 
-      if (!runtimeModeChanged && !providerChanged && !shouldRestartForModelChange) {
+      if (
+        !runtimeModeChanged &&
+        !approvalPolicyChanged &&
+        !sandboxModeChanged &&
+        !providerChanged &&
+        !shouldRestartForModelChange
+      ) {
         return existingSessionThreadId;
       }
 
@@ -284,6 +314,12 @@ const make = Effect.gen(function* () {
         currentRuntimeMode: thread.session?.runtimeMode,
         desiredRuntimeMode: thread.runtimeMode,
         runtimeModeChanged,
+        currentApprovalPolicy: thread.session?.approvalPolicy,
+        desiredApprovalPolicy,
+        approvalPolicyChanged,
+        currentSandboxMode: thread.session?.sandboxMode,
+        desiredSandboxMode,
+        sandboxModeChanged,
         providerChanged,
         modelChanged,
         shouldRestartForModelChange,
@@ -319,6 +355,8 @@ const make = Effect.gen(function* () {
     readonly model?: string;
     readonly modelOptions?: ProviderModelOptions;
     readonly providerOptions?: ProviderStartOptions;
+    readonly approvalPolicy?: ProviderApprovalPolicy;
+    readonly sandboxMode?: ProviderSandboxMode;
     readonly interactionMode?: "default" | "plan";
     readonly createdAt: string;
   }) {
@@ -334,6 +372,8 @@ const make = Effect.gen(function* () {
       ...(input.model !== undefined ? { model: input.model } : {}),
       ...(input.modelOptions !== undefined ? { modelOptions: input.modelOptions } : {}),
       ...(input.providerOptions !== undefined ? { providerOptions: input.providerOptions } : {}),
+      ...(input.approvalPolicy !== undefined ? { approvalPolicy: input.approvalPolicy } : {}),
+      ...(input.sandboxMode !== undefined ? { sandboxMode: input.sandboxMode } : {}),
     });
     const normalizedInput = toNonEmptyProviderInput(input.messageText);
     const normalizedAttachments = input.attachments ?? [];
@@ -467,13 +507,18 @@ const make = Effect.gen(function* () {
       ...(message.attachments !== undefined ? { attachments: message.attachments } : {}),
       ...(event.payload.provider !== undefined ? { provider: event.payload.provider } : {}),
       ...(event.payload.model !== undefined ? { model: event.payload.model } : {}),
-      ...(event.payload.modelOptions !== undefined
-        ? { modelOptions: event.payload.modelOptions }
+      ...(event.payload.modelOptions !== undefined ? { modelOptions: event.payload.modelOptions } : {}),
+      ...(event.payload.providerOptions !== undefined ? { providerOptions: event.payload.providerOptions } : {}),
+      ...(event.payload.approvalPolicy !== undefined
+        ? { approvalPolicy: event.payload.approvalPolicy }
         : {}),
-      ...(event.payload.providerOptions !== undefined
-        ? { providerOptions: event.payload.providerOptions }
+      ...(event.payload.sandboxMode !== undefined
+        ? { sandboxMode: event.payload.sandboxMode }
         : {}),
-      interactionMode: event.payload.interactionMode,
+      ...(event.payload.interactionMode !== undefined
+        ? { interactionMode: event.payload.interactionMode }
+        : {}),
+      ...(event.payload.runtimeMode !== undefined ? { runtimeMode: event.payload.runtimeMode } : {}),
       createdAt: event.payload.createdAt,
     });
   });
@@ -606,7 +651,11 @@ const make = Effect.gen(function* () {
         threadId: thread.id,
         status: "stopped",
         providerName: thread.session?.providerName ?? null,
+        providerSessionId: thread.session?.providerSessionId ?? null,
+        providerThreadId: thread.session?.providerThreadId ?? null,
         runtimeMode: thread.session?.runtimeMode ?? DEFAULT_RUNTIME_MODE,
+        approvalPolicy: thread.session?.approvalPolicy ?? DEFAULT_PROVIDER_APPROVAL_POLICY,
+        sandboxMode: thread.session?.sandboxMode ?? DEFAULT_PROVIDER_SANDBOX_MODE,
         activeTurnId: null,
         lastError: thread.session?.lastError ?? null,
         updatedAt: now,

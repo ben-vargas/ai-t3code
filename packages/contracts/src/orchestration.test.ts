@@ -3,7 +3,9 @@ import { it } from "@effect/vitest";
 import { Effect, Schema } from "effect";
 
 import {
+  DEFAULT_PROVIDER_APPROVAL_POLICY,
   DEFAULT_PROVIDER_INTERACTION_MODE,
+  DEFAULT_PROVIDER_SANDBOX_MODE,
   DEFAULT_RUNTIME_MODE,
   OrchestrationGetTurnDiffInput,
   OrchestrationSession,
@@ -115,6 +117,8 @@ it.effect("decodes thread.turn.start defaults for provider and runtime mode", ()
     assert.strictEqual(parsed.provider, undefined);
     assert.strictEqual(parsed.runtimeMode, DEFAULT_RUNTIME_MODE);
     assert.strictEqual(parsed.interactionMode, DEFAULT_PROVIDER_INTERACTION_MODE);
+    assert.strictEqual(parsed.approvalPolicy, DEFAULT_PROVIDER_APPROVAL_POLICY);
+    assert.strictEqual(parsed.sandboxMode, DEFAULT_PROVIDER_SANDBOX_MODE);
   }),
 );
 
@@ -130,13 +134,36 @@ it.effect("preserves explicit provider and runtime mode in thread.turn.start", (
         text: "hello",
         attachments: [],
       },
-      provider: "codex",
+      provider: "claudeCode",
       runtimeMode: "full-access",
+      approvalPolicy: "never",
+      sandboxMode: "danger-full-access",
       createdAt: "2026-01-01T00:00:00.000Z",
     });
-    assert.strictEqual(parsed.provider, "codex");
+    assert.strictEqual(parsed.provider, "claudeCode");
     assert.strictEqual(parsed.runtimeMode, "full-access");
     assert.strictEqual(parsed.interactionMode, DEFAULT_PROVIDER_INTERACTION_MODE);
+    assert.strictEqual(parsed.approvalPolicy, "never");
+    assert.strictEqual(parsed.sandboxMode, "danger-full-access");
+  }),
+);
+
+it.effect("accepts cursor provider in thread.turn.start", () =>
+  Effect.gen(function* () {
+    const parsed = yield* decodeThreadTurnStartCommand({
+      type: "thread.turn.start",
+      commandId: "cmd-turn-cursor",
+      threadId: "thread-1",
+      message: {
+        messageId: "msg-3",
+        role: "user",
+        text: "hello",
+        attachments: [],
+      },
+      provider: "cursor",
+      createdAt: "2026-01-01T00:00:00.000Z",
+    });
+    assert.strictEqual(parsed.provider, "cursor");
   }),
 );
 
@@ -198,6 +225,8 @@ it.effect(
       assert.strictEqual(parsed.provider, undefined);
       assert.strictEqual(parsed.runtimeMode, DEFAULT_RUNTIME_MODE);
       assert.strictEqual(parsed.interactionMode, DEFAULT_PROVIDER_INTERACTION_MODE);
+      assert.strictEqual(parsed.approvalPolicy, DEFAULT_PROVIDER_APPROVAL_POLICY);
+      assert.strictEqual(parsed.sandboxMode, DEFAULT_PROVIDER_SANDBOX_MODE);
     }),
 );
 
@@ -214,5 +243,7 @@ it.effect("decodes orchestration session runtime mode defaults", () =>
       updatedAt: "2026-01-01T00:00:00.000Z",
     });
     assert.strictEqual(parsed.runtimeMode, DEFAULT_RUNTIME_MODE);
+    assert.strictEqual(parsed.approvalPolicy, DEFAULT_PROVIDER_APPROVAL_POLICY);
+    assert.strictEqual(parsed.sandboxMode, DEFAULT_PROVIDER_SANDBOX_MODE);
   }),
 );

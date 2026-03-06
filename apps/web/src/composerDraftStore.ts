@@ -8,8 +8,12 @@ import {
   type ProviderInteractionMode,
   type RuntimeMode,
 } from "@t3tools/contracts";
-import { normalizeModelSlug } from "@t3tools/shared/model";
-import { DEFAULT_INTERACTION_MODE, DEFAULT_RUNTIME_MODE, type ChatImageAttachment } from "./types";
+import { inferProviderFromModel, normalizeModelSlug } from "@t3tools/shared/model";
+import {
+  DEFAULT_INTERACTION_MODE,
+  DEFAULT_RUNTIME_MODE,
+  type ChatImageAttachment,
+} from "./types";
 import { Debouncer } from "@tanstack/react-pacer";
 import { create } from "zustand";
 import { createJSONStorage, persist, type StateStorage } from "zustand/middleware";
@@ -246,7 +250,7 @@ function shouldRemoveDraft(draft: ComposerThreadDraftState): boolean {
 }
 
 function normalizeProviderKind(value: unknown): ProviderKind | null {
-  return value === "codex" ? value : null;
+  return value === "codex" || value === "claudeCode" || value === "cursor" ? value : null;
 }
 
 function revokeObjectPreviewUrl(previewUrl: string): void {
@@ -404,7 +408,11 @@ function normalizePersistedComposerDraftState(value: unknown): PersistedComposer
           return normalized ? [normalized] : [];
         })
       : [];
-    const provider = normalizeProviderKind(draftCandidate.provider);
+    const provider =
+      normalizeProviderKind(draftCandidate.provider) ??
+      inferProviderFromModel(
+        typeof draftCandidate.model === "string" ? draftCandidate.model : null,
+      );
     const model =
       typeof draftCandidate.model === "string"
         ? normalizeModelSlug(draftCandidate.model, provider ?? "codex")
@@ -848,9 +856,13 @@ export const useComposerDraftStore = create<ComposerDraftStoreState>()(
         if (threadId.length === 0) {
           return;
         }
-        const normalizedModel = normalizeModelSlug(model) ?? null;
         set((state) => {
           const existing = state.draftsByThreadId[threadId];
+          const normalizedModel =
+            normalizeModelSlug(
+              model,
+              existing?.provider ?? inferProviderFromModel(model) ?? "codex",
+            ) ?? null;
           if (!existing && normalizedModel === null) {
             return state;
           }

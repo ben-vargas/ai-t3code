@@ -27,7 +27,7 @@ export const ORCHESTRATION_WS_CHANNELS = {
   domainEvent: "orchestration.domainEvent",
 } as const;
 
-export const ProviderKind = Schema.Literal("codex");
+export const ProviderKind = Schema.Literals(["codex", "claudeCode", "cursor"]);
 export type ProviderKind = typeof ProviderKind.Type;
 export const ProviderApprovalPolicy = Schema.Literals([
   "untrusted",
@@ -42,13 +42,21 @@ export const ProviderSandboxMode = Schema.Literals([
   "danger-full-access",
 ]);
 export type ProviderSandboxMode = typeof ProviderSandboxMode.Type;
+export const DEFAULT_PROVIDER_APPROVAL_POLICY: ProviderApprovalPolicy = "on-failure";
+export const DEFAULT_PROVIDER_SANDBOX_MODE: ProviderSandboxMode = "workspace-write";
 export const DEFAULT_PROVIDER_KIND: ProviderKind = "codex";
 const CodexProviderStartOptions = Schema.Struct({
   binaryPath: Schema.optional(TrimmedNonEmptyString),
   homePath: Schema.optional(TrimmedNonEmptyString),
 });
+const ClaudeCodeProviderStartOptions = Schema.Struct({
+  binaryPath: Schema.optional(TrimmedNonEmptyString),
+  permissionMode: Schema.optional(TrimmedNonEmptyString),
+  maxThinkingTokens: Schema.optional(NonNegativeInt),
+});
 const ProviderStartOptions = Schema.Struct({
   codex: Schema.optional(CodexProviderStartOptions),
+  claudeCode: Schema.optional(ClaudeCodeProviderStartOptions),
 });
 export const RuntimeMode = Schema.Literals(["approval-required", "full-access"]);
 export type RuntimeMode = typeof RuntimeMode.Type;
@@ -183,7 +191,21 @@ export const OrchestrationSession = Schema.Struct({
   threadId: ThreadId,
   status: OrchestrationSessionStatus,
   providerName: Schema.NullOr(TrimmedNonEmptyString),
-  runtimeMode: RuntimeMode.pipe(Schema.withDecodingDefault(() => DEFAULT_RUNTIME_MODE)),
+  providerSessionId: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),
+  providerThreadId: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),
+  runtimeMode: Schema.optional(
+    RuntimeMode.pipe(Schema.withDecodingDefault(() => DEFAULT_RUNTIME_MODE)),
+  ),
+  approvalPolicy: Schema.optional(
+    ProviderApprovalPolicy.pipe(
+      Schema.withDecodingDefault(() => DEFAULT_PROVIDER_APPROVAL_POLICY),
+    ),
+  ),
+  sandboxMode: Schema.optional(
+    ProviderSandboxMode.pipe(
+      Schema.withDecodingDefault(() => DEFAULT_PROVIDER_SANDBOX_MODE),
+    ),
+  ),
   activeTurnId: Schema.NullOr(TurnId),
   lastError: Schema.NullOr(TrimmedNonEmptyString),
   updatedAt: IsoDateTime,
@@ -370,10 +392,16 @@ export const ThreadTurnStartCommand = Schema.Struct({
   modelOptions: Schema.optional(ProviderModelOptions),
   providerOptions: Schema.optional(ProviderStartOptions),
   assistantDeliveryMode: Schema.optional(AssistantDeliveryMode),
-  runtimeMode: RuntimeMode.pipe(Schema.withDecodingDefault(() => DEFAULT_RUNTIME_MODE)),
-  interactionMode: ProviderInteractionMode.pipe(
-    Schema.withDecodingDefault(() => DEFAULT_PROVIDER_INTERACTION_MODE),
+  runtimeMode: Schema.optional(
+    RuntimeMode.pipe(Schema.withDecodingDefault(() => DEFAULT_RUNTIME_MODE)),
   ),
+  interactionMode: Schema.optional(
+    ProviderInteractionMode.pipe(
+      Schema.withDecodingDefault(() => DEFAULT_PROVIDER_INTERACTION_MODE),
+    ),
+  ),
+  approvalPolicy: Schema.optional(ProviderApprovalPolicy),
+  sandboxMode: Schema.optional(ProviderSandboxMode),
   createdAt: IsoDateTime,
 });
 
@@ -392,8 +420,10 @@ const ClientThreadTurnStartCommand = Schema.Struct({
   modelOptions: Schema.optional(ProviderModelOptions),
   providerOptions: Schema.optional(ProviderStartOptions),
   assistantDeliveryMode: Schema.optional(AssistantDeliveryMode),
-  runtimeMode: RuntimeMode,
-  interactionMode: ProviderInteractionMode,
+  runtimeMode: Schema.optional(RuntimeMode),
+  interactionMode: Schema.optional(ProviderInteractionMode),
+  approvalPolicy: Schema.optional(ProviderApprovalPolicy),
+  sandboxMode: Schema.optional(ProviderSandboxMode),
   createdAt: IsoDateTime,
 });
 
@@ -614,9 +644,13 @@ export const ThreadCreatedPayload = Schema.Struct({
   projectId: ProjectId,
   title: TrimmedNonEmptyString,
   model: TrimmedNonEmptyString,
-  runtimeMode: RuntimeMode.pipe(Schema.withDecodingDefault(() => DEFAULT_RUNTIME_MODE)),
-  interactionMode: ProviderInteractionMode.pipe(
-    Schema.withDecodingDefault(() => DEFAULT_PROVIDER_INTERACTION_MODE),
+  runtimeMode: Schema.optional(
+    RuntimeMode.pipe(Schema.withDecodingDefault(() => DEFAULT_RUNTIME_MODE)),
+  ),
+  interactionMode: Schema.optional(
+    ProviderInteractionMode.pipe(
+      Schema.withDecodingDefault(() => DEFAULT_PROVIDER_INTERACTION_MODE),
+    ),
   ),
   branch: Schema.NullOr(TrimmedNonEmptyString),
   worktreePath: Schema.NullOr(TrimmedNonEmptyString),
@@ -676,6 +710,8 @@ export const ThreadTurnStartRequestedPayload = Schema.Struct({
   interactionMode: ProviderInteractionMode.pipe(
     Schema.withDecodingDefault(() => DEFAULT_PROVIDER_INTERACTION_MODE),
   ),
+  approvalPolicy: Schema.optional(ProviderApprovalPolicy),
+  sandboxMode: Schema.optional(ProviderSandboxMode),
   createdAt: IsoDateTime,
 });
 
