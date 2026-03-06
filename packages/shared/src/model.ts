@@ -12,7 +12,15 @@ type CatalogProvider = keyof typeof MODEL_OPTIONS_BY_PROVIDER;
 
 const MODEL_SLUG_SET_BY_PROVIDER: Record<CatalogProvider, ReadonlySet<ModelSlug>> = {
   codex: new Set(MODEL_OPTIONS_BY_PROVIDER.codex.map((option) => option.slug)),
+  claudeCode: new Set(MODEL_OPTIONS_BY_PROVIDER.claudeCode.map((option) => option.slug)),
+  cursor: new Set(MODEL_OPTIONS_BY_PROVIDER.cursor.map((option) => option.slug)),
 };
+const CURSOR_DISTINCT_MODEL_SLUGS = new Set<ModelSlug>(
+  [...MODEL_SLUG_SET_BY_PROVIDER.cursor].filter(
+    (slug) =>
+      !MODEL_SLUG_SET_BY_PROVIDER.codex.has(slug) && !MODEL_SLUG_SET_BY_PROVIDER.claudeCode.has(slug),
+  ),
+);
 
 export function getModelOptions(provider: ProviderKind = "codex") {
   return MODEL_OPTIONS_BY_PROVIDER[provider];
@@ -59,6 +67,49 @@ export function resolveModelSlugForProvider(
   model: string | null | undefined,
 ): ModelSlug {
   return resolveModelSlug(model, provider);
+}
+
+export function inferProviderFromModel(
+  model: string | null | undefined,
+): ProviderKind | null {
+  if (typeof model !== "string") {
+    return null;
+  }
+
+  const trimmed = model.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const normalizedCursor = normalizeModelSlug(trimmed, "cursor");
+  if (normalizedCursor && CURSOR_DISTINCT_MODEL_SLUGS.has(normalizedCursor)) {
+    return "cursor";
+  }
+
+  const normalizedClaude = normalizeModelSlug(trimmed, "claudeCode");
+  if (normalizedClaude && MODEL_SLUG_SET_BY_PROVIDER.claudeCode.has(normalizedClaude)) {
+    return "claudeCode";
+  }
+
+  const normalizedCodex = normalizeModelSlug(trimmed, "codex");
+  if (normalizedCodex && MODEL_SLUG_SET_BY_PROVIDER.codex.has(normalizedCodex)) {
+    return "codex";
+  }
+
+  if (
+    trimmed.startsWith("composer-") ||
+    trimmed.startsWith("gemini-") ||
+    trimmed.startsWith("cursor/") ||
+    trimmed.endsWith("-thinking")
+  ) {
+    return "cursor";
+  }
+
+  if (trimmed.startsWith("claude-") || trimmed.startsWith("claude/")) {
+    return "claudeCode";
+  }
+
+  return null;
 }
 
 export function getReasoningEffortOptions(

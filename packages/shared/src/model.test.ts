@@ -6,6 +6,7 @@ import {
   getDefaultReasoningEffort,
   getModelOptions,
   getReasoningEffortOptions,
+  inferProviderFromModel,
   normalizeModelSlug,
   resolveModelSlug,
 } from "./model";
@@ -65,5 +66,19 @@ describe("getReasoningEffortOptions", () => {
 describe("getDefaultReasoningEffort", () => {
   it("returns provider-scoped defaults", () => {
     expect(getDefaultReasoningEffort("codex")).toBe("high");
+  });
+});
+
+describe("inferProviderFromModel", () => {
+  it("detects provider-specific built-in models", () => {
+    expect(inferProviderFromModel("claude-opus-4-6")).toBe("claudeCode");
+    expect(inferProviderFromModel("opus-4.6")).toBe("cursor");
+    expect(inferProviderFromModel("gpt-5.3-codex")).toBe("codex");
+  });
+
+  it("detects provider-specific custom model prefixes", () => {
+    expect(inferProviderFromModel("claude/custom-opus")).toBe("claudeCode");
+    expect(inferProviderFromModel("cursor/custom-model")).toBe("cursor");
+    expect(inferProviderFromModel("openai/gpt-oss-120b")).toBeNull();
   });
 });
