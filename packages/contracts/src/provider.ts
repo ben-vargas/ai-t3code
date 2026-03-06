@@ -5,6 +5,7 @@ import {
   ApprovalRequestId,
   EventId,
   IsoDateTime,
+  NonNegativeInt,
   ProviderItemId,
   ThreadId,
   TurnId,
@@ -47,13 +48,28 @@ export const ProviderSession = Schema.Struct({
 });
 export type ProviderSession = typeof ProviderSession.Type;
 
-const CodexProviderStartOptions = Schema.Struct({
+export const CodexProviderStartOptions = Schema.Struct({
   binaryPath: Schema.optional(TrimmedNonEmptyStringSchema),
   homePath: Schema.optional(TrimmedNonEmptyStringSchema),
 });
+export type CodexProviderStartOptions = typeof CodexProviderStartOptions.Type;
+
+export const ClaudeCodeProviderStartOptions = Schema.Struct({
+  binaryPath: Schema.optional(TrimmedNonEmptyStringSchema),
+  permissionMode: Schema.optional(TrimmedNonEmptyStringSchema),
+  maxThinkingTokens: Schema.optional(NonNegativeInt),
+});
+export type ClaudeCodeProviderStartOptions = typeof ClaudeCodeProviderStartOptions.Type;
+
+export const CursorProviderStartOptions = Schema.Struct({
+  binaryPath: Schema.optional(TrimmedNonEmptyStringSchema),
+});
+export type CursorProviderStartOptions = typeof CursorProviderStartOptions.Type;
 
 export const ProviderStartOptions = Schema.Struct({
   codex: Schema.optional(CodexProviderStartOptions),
+  claudeCode: Schema.optional(ClaudeCodeProviderStartOptions),
+  cursor: Schema.optional(CursorProviderStartOptions),
 });
 export type ProviderStartOptions = typeof ProviderStartOptions.Type;
 
