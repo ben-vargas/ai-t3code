@@ -20,15 +20,29 @@ import type {
 
 export type ProviderPickerKind = ProviderKind | "claudeCode" | "cursor";
 
-export const PROVIDER_OPTIONS: Array<{
+export interface ProviderOption {
   value: ProviderPickerKind;
   label: string;
   available: boolean;
-}> = [
+}
+
+export interface AvailableProviderOption extends ProviderOption {
+  value: ProviderKind;
+  available: true;
+}
+
+export const PROVIDER_OPTIONS: ProviderOption[] = [
   { value: "codex", label: "Codex", available: true },
   { value: "claudeCode", label: "Claude Code", available: true },
   { value: "cursor", label: "Cursor", available: false },
 ];
+
+function isAvailableProviderOption(option: ProviderOption): option is AvailableProviderOption {
+  return option.available;
+}
+
+export const AVAILABLE_PROVIDER_OPTIONS = PROVIDER_OPTIONS.filter(isAvailableProviderOption);
+export const UNAVAILABLE_PROVIDER_OPTIONS = PROVIDER_OPTIONS.filter((option) => !option.available);
 
 export interface WorkLogEntry {
   id: string;

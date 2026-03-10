@@ -1,6 +1,8 @@
 import {
   ApprovalRequestId,
   type ChatAttachment,
+  DEFAULT_PROVIDER_INTERACTION_MODE,
+  DEFAULT_RUNTIME_MODE,
   type OrchestrationEvent,
 } from "@t3tools/contracts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
@@ -421,8 +423,8 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
             projectId: event.payload.projectId,
             title: event.payload.title,
             model: event.payload.model,
-            runtimeMode: event.payload.runtimeMode,
-            interactionMode: event.payload.interactionMode,
+            runtimeMode: event.payload.runtimeMode ?? DEFAULT_RUNTIME_MODE,
+            interactionMode: event.payload.interactionMode ?? DEFAULT_PROVIDER_INTERACTION_MODE,
             branch: event.payload.branch,
             worktreePath: event.payload.worktreePath,
             latestTurnId: null,
@@ -758,7 +760,7 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
         threadId: event.payload.threadId,
         status: event.payload.session.status,
         providerName: event.payload.session.providerName,
-        runtimeMode: event.payload.session.runtimeMode,
+        runtimeMode: event.payload.session.runtimeMode ?? DEFAULT_RUNTIME_MODE,
         activeTurnId: event.payload.session.activeTurnId,
         lastError: event.payload.session.lastError,
         updatedAt: event.payload.session.updatedAt,

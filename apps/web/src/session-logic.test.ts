@@ -2,9 +2,11 @@ import { EventId, MessageId, TurnId, type OrchestrationThreadActivity } from "@t
 import { describe, expect, it } from "vitest";
 
 import {
+  AVAILABLE_PROVIDER_OPTIONS,
   deriveActiveWorkStartedAt,
   deriveActivePlanState,
   PROVIDER_OPTIONS,
+  UNAVAILABLE_PROVIDER_OPTIONS,
   derivePendingApprovals,
   derivePendingUserInputs,
   deriveTimelineEntries,
@@ -555,6 +557,47 @@ describe("deriveTimelineEntries", () => {
   });
 });
 
+describe("deriveTimelineEntries", () => {
+  it("includes proposed plans alongside messages and work entries in chronological order", () => {
+    const entries = deriveTimelineEntries(
+      [
+        {
+          id: MessageId.makeUnsafe("message-1"),
+          role: "assistant",
+          text: "hello",
+          createdAt: "2026-02-23T00:00:01.000Z",
+          streaming: false,
+        },
+      ],
+      [
+        {
+          id: "plan:thread-1:turn:turn-1",
+          turnId: TurnId.makeUnsafe("turn-1"),
+          planMarkdown: "# Ship it",
+          createdAt: "2026-02-23T00:00:02.000Z",
+          updatedAt: "2026-02-23T00:00:02.000Z",
+        },
+      ],
+      [
+        {
+          id: "work-1",
+          createdAt: "2026-02-23T00:00:03.000Z",
+          label: "Ran tests",
+          tone: "tool",
+        },
+      ],
+    );
+
+    expect(entries.map((entry) => entry.kind)).toEqual(["message", "proposed-plan", "work"]);
+    expect(entries[1]).toMatchObject({
+      kind: "proposed-plan",
+      proposedPlan: {
+        planMarkdown: "# Ship it",
+      },
+    });
+  });
+});
+
 describe("hasToolActivityForTurn", () => {
   it("returns false when turn id is missing", () => {
     const activities: OrchestrationThreadActivity[] = [
@@ -673,7 +716,7 @@ describe("deriveActiveWorkStartedAt", () => {
 });
 
 describe("PROVIDER_OPTIONS", () => {
-  it("advertises Claude Code on the Claude stack while keeping Cursor as a placeholder", () => {
+  it("keeps Claude Code selectable while leaving Cursor as unavailable", () => {
     const claude = PROVIDER_OPTIONS.find((option) => option.value === "claudeCode");
     const cursor = PROVIDER_OPTIONS.find((option) => option.value === "cursor");
     expect(PROVIDER_OPTIONS).toEqual([
@@ -691,5 +734,15 @@ describe("PROVIDER_OPTIONS", () => {
       label: "Cursor",
       available: false,
     });
+  });
+
+  it("keeps available and unavailable provider groups aligned with provider availability", () => {
+    expect(AVAILABLE_PROVIDER_OPTIONS).toEqual([
+      { value: "codex", label: "Codex", available: true },
+      { value: "claudeCode", label: "Claude Code", available: true },
+    ]);
+    expect(UNAVAILABLE_PROVIDER_OPTIONS).toEqual([
+      { value: "cursor", label: "Cursor", available: false },
+    ]);
   });
 });

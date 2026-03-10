@@ -196,7 +196,6 @@ describe("ProviderCommandReactor", () => {
           sessionModelSwitch: provider === "cursor" ? "unsupported" : "in-session",
         }),
       rollbackConversation: () => unsupported(),
-      stopAll: () => Effect.void,
       streamEvents: Stream.fromPubSub(runtimeEventPubSub),
     };
 
