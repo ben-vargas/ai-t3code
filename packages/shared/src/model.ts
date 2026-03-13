@@ -18,7 +18,8 @@ const MODEL_SLUG_SET_BY_PROVIDER: Record<CatalogProvider, ReadonlySet<ModelSlug>
 const CURSOR_DISTINCT_MODEL_SLUGS = new Set<ModelSlug>(
   [...MODEL_SLUG_SET_BY_PROVIDER.cursor].filter(
     (slug) =>
-      !MODEL_SLUG_SET_BY_PROVIDER.codex.has(slug) && !MODEL_SLUG_SET_BY_PROVIDER.claudeCode.has(slug),
+      !MODEL_SLUG_SET_BY_PROVIDER.codex.has(slug) &&
+      !MODEL_SLUG_SET_BY_PROVIDER.claudeCode.has(slug),
   ),
 );
 
@@ -69,9 +70,7 @@ export function resolveModelSlugForProvider(
   return resolveModelSlug(model, provider);
 }
 
-export function inferProviderFromModel(
-  model: string | null | undefined,
-): ProviderKind | null {
+export function inferProviderFromModel(model: string | null | undefined): ProviderKind | null {
   if (typeof model !== "string") {
     return null;
   }

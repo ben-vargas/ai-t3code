@@ -197,14 +197,10 @@ export const OrchestrationSession = Schema.Struct({
     RuntimeMode.pipe(Schema.withDecodingDefault(() => DEFAULT_RUNTIME_MODE)),
   ),
   approvalPolicy: Schema.optional(
-    ProviderApprovalPolicy.pipe(
-      Schema.withDecodingDefault(() => DEFAULT_PROVIDER_APPROVAL_POLICY),
-    ),
+    ProviderApprovalPolicy.pipe(Schema.withDecodingDefault(() => DEFAULT_PROVIDER_APPROVAL_POLICY)),
   ),
   sandboxMode: Schema.optional(
-    ProviderSandboxMode.pipe(
-      Schema.withDecodingDefault(() => DEFAULT_PROVIDER_SANDBOX_MODE),
-    ),
+    ProviderSandboxMode.pipe(Schema.withDecodingDefault(() => DEFAULT_PROVIDER_SANDBOX_MODE)),
   ),
   activeTurnId: Schema.NullOr(TurnId),
   lastError: Schema.NullOr(TrimmedNonEmptyString),

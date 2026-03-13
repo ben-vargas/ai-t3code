@@ -245,9 +245,13 @@ const make = Effect.gen(function* () {
         ...(effectiveCwd ? { cwd: effectiveCwd } : {}),
         ...(desiredModel ? { model: desiredModel } : {}),
         ...(options?.modelOptions !== undefined ? { modelOptions: options.modelOptions } : {}),
-        ...(options?.approvalPolicy !== undefined ? { approvalPolicy: options.approvalPolicy } : {}),
+        ...(options?.approvalPolicy !== undefined
+          ? { approvalPolicy: options.approvalPolicy }
+          : {}),
         ...(options?.sandboxMode !== undefined ? { sandboxMode: options.sandboxMode } : {}),
-        ...(options?.providerOptions !== undefined ? { providerOptions: options.providerOptions } : {}),
+        ...(options?.providerOptions !== undefined
+          ? { providerOptions: options.providerOptions }
+          : {}),
         ...(input?.resumeCursor !== undefined ? { resumeCursor: input.resumeCursor } : {}),
         runtimeMode: desiredRuntimeMode,
       });
@@ -283,7 +287,8 @@ const make = Effect.gen(function* () {
         options.approvalPolicy !== thread.session?.approvalPolicy;
       const sandboxModeChanged =
         options?.sandboxMode !== undefined && options.sandboxMode !== thread.session?.sandboxMode;
-      const providerChanged = options?.provider !== undefined && options.provider !== currentProvider;
+      const providerChanged =
+        options?.provider !== undefined && options.provider !== currentProvider;
       const activeSession = yield* resolveActiveSession(existingSessionThreadId);
       const sessionModelSwitch =
         currentProvider === undefined
@@ -507,8 +512,12 @@ const make = Effect.gen(function* () {
       ...(message.attachments !== undefined ? { attachments: message.attachments } : {}),
       ...(event.payload.provider !== undefined ? { provider: event.payload.provider } : {}),
       ...(event.payload.model !== undefined ? { model: event.payload.model } : {}),
-      ...(event.payload.modelOptions !== undefined ? { modelOptions: event.payload.modelOptions } : {}),
-      ...(event.payload.providerOptions !== undefined ? { providerOptions: event.payload.providerOptions } : {}),
+      ...(event.payload.modelOptions !== undefined
+        ? { modelOptions: event.payload.modelOptions }
+        : {}),
+      ...(event.payload.providerOptions !== undefined
+        ? { providerOptions: event.payload.providerOptions }
+        : {}),
       ...(event.payload.approvalPolicy !== undefined
         ? { approvalPolicy: event.payload.approvalPolicy }
         : {}),
@@ -518,7 +527,9 @@ const make = Effect.gen(function* () {
       ...(event.payload.interactionMode !== undefined
         ? { interactionMode: event.payload.interactionMode }
         : {}),
-      ...(event.payload.runtimeMode !== undefined ? { runtimeMode: event.payload.runtimeMode } : {}),
+      ...(event.payload.runtimeMode !== undefined
+        ? { runtimeMode: event.payload.runtimeMode }
+        : {}),
       createdAt: event.payload.createdAt,
     });
   });

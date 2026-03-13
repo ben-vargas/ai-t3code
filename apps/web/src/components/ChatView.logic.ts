@@ -1,4 +1,9 @@
-import { ProjectId, type ProviderKind, type ThreadId } from "@t3tools/contracts";
+import {
+  getCursorModelFamilyOptions,
+  ProjectId,
+  type ProviderKind,
+  type ThreadId,
+} from "@t3tools/contracts";
 import { type ChatMessage, type Thread } from "../types";
 import { randomUUID } from "~/lib/utils";
 import { getAppModelOptions } from "../appSettings";
@@ -118,8 +123,19 @@ export function cloneComposerImageForRetry(
 
 export function getCustomModelOptionsByProvider(settings: {
   customCodexModels: readonly string[];
+  customClaudeModels: readonly string[];
+  customCursorModels: readonly string[];
 }): Record<ProviderKind, ReadonlyArray<{ slug: string; name: string }>> {
+  const cursorFamilyOptions = getCursorModelFamilyOptions();
   return {
     codex: getAppModelOptions("codex", settings.customCodexModels),
+    claudeCode: getAppModelOptions("claudeCode", settings.customClaudeModels),
+    cursor: [
+      ...cursorFamilyOptions,
+      ...getAppModelOptions("cursor", settings.customCursorModels).filter(
+        (option) =>
+          option.isCustom && !cursorFamilyOptions.some((family) => family.slug === option.slug),
+      ),
+    ],
   };
 }

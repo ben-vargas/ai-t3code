@@ -9,11 +9,7 @@ import {
   type RuntimeMode,
 } from "@t3tools/contracts";
 import { inferProviderFromModel, normalizeModelSlug } from "@t3tools/shared/model";
-import {
-  DEFAULT_INTERACTION_MODE,
-  DEFAULT_RUNTIME_MODE,
-  type ChatImageAttachment,
-} from "./types";
+import { DEFAULT_INTERACTION_MODE, DEFAULT_RUNTIME_MODE, type ChatImageAttachment } from "./types";
 import { Debouncer } from "@tanstack/react-pacer";
 import { create } from "zustand";
 import { createJSONStorage, persist, type StateStorage } from "zustand/middleware";
